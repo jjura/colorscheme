@@ -1,0 +1,130 @@
+#!/bin/bash
+
+function color_entry
+{
+    echo "\$color_$1_$2"
+}
+
+function color_hex
+{
+    eval "echo $3\$color_$1_$2"
+}
+
+function color_sway
+{
+    for color_name in "blue" "gray" "red"
+    do
+        for color_index in 0 1 2
+        do
+            color_entry="$(color_entry "$color_name" "$color_index")"
+            color_hex="$(color_hex "$color_name" "$color_index" "\#")"
+
+            sed -i "s|^set $color_entry .*|set $color_entry $color_hex|" "$1"
+        done
+    done
+}
+
+function color_swaybar
+{
+    color_index=0
+
+    for color_entry in "background" "border" "color"
+    do
+        color_hex="$(color_hex "gray" "$color_index" "\#")"
+        color_index="$(expr "$color_index" + 1)"
+
+        sed -i "s|\"$color_entry\": .*|\"$color_entry\": \"$color_hex\",|" "$1"
+    done
+}
+
+function color_swaynag
+{
+    color_index=0
+
+    for color_entries in "background button-background" "border-bottom" "button-text text"
+    do
+        color_hex="$(color_hex "red" "$color_index" "")"
+        color_index="$(expr "$color_index" + 1)"
+
+        for color_entry in $color_entries
+        do
+            sed -i "s|^$color_entry=.*|$color_entry=$color_hex|" "$1"
+        done
+    done
+}
+
+function color_tofi
+{
+    color_index=0
+
+    for color_entry in "background-color" "border-color" "text-color"
+    do
+        color_hex="$(color_hex "gray" "$color_index" "\#")"
+        color_index="$(expr "$color_index" + 1)"
+
+        sed -i "s|^$color_entry = .*|$color_entry = $color_hex|" "$1"
+    done
+
+    sed -i "s|^selection-color = .*|selection-color = #$color_red_2|" "$1"
+}
+
+function color_fnott
+{
+    for color_category in "low gray" "normal green" "critical red"
+    do
+        color_index=0
+        color_section="$(echo "$color_category" | cut -d " " -f 1)"
+        color_name="$(echo "$color_category" | cut -d " " -f 2)"
+
+        for color_entries in "background" "border-color title-color" "body-color summary-color"
+        do
+            for color_entry in $color_entries
+            do
+                color_hex="$(color_hex "$color_name" "$color_index" "")"
+
+                sed -i "/\[$color_section\]/,/\[/s|^$color_entry=.*|$color_entry=${color_hex}ff|" "$1"
+            done
+
+            color_index="$(expr "$color_index" + 1)"
+        done
+    done
+}
+
+color_hue="$1"
+
+if [ -z "$color_hue" ] || [ "$color_hue" -lt 0 ] || [ "$color_hue" -gt 360 ]
+then
+    echo "Usage: $(basename "$0") <hue>"
+    exit
+fi
+
+# Color: blue
+color_blue_0="$(converter "$color_hue" 60 40)"
+color_blue_1="$(converter "$color_hue" 60 70)"
+color_blue_2="$(converter "$color_hue" 50 100)"
+
+# Color: gray
+color_gray_0="$(converter "$color_hue" 60 20)"
+color_gray_1="$(converter "$color_hue" 60 50)"
+color_gray_2="$(converter "$color_hue" 50 80)"
+
+# Color: green
+color_green_0="$(converter 160 60 30)"
+color_green_1="$(converter 160 60 60)"
+color_green_2="$(converter 160 50 90)"
+
+# Color: red
+color_red_0="$(converter 350 60 40)"
+color_red_1="$(converter 350 60 70)"
+color_red_2="$(converter 350 50 100)"
+
+# Config: sway
+color_sway "$HOME/.config/sway/config"
+color_swaybar "$HOME/.local/bin/local-status"
+color_swaynag "$HOME/.config/swaynag/config"
+
+# Config: tofi
+color_tofi "$HOME/.config/tofi/config"
+
+# Config: fnott
+color_fnott "$HOME/.config/fnott/fnott.ini"
